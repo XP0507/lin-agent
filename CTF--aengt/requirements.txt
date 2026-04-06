@@ -1,0 +1,36 @@
+# CyberStrike-Agent - CTF 自动化解题框架
+# 核心依赖
+
+# LLM 框架
+langchain>=0.1.0
+langchain-openai>=0.0.5
+langchain-anthropic>=0.1.0
+openai>=1.0.0
+anthropic>=0.18.0
+
+# CTF 安全工具
+pwntools>=4.11.0
+requests>=2.31.0
+z3-solver>=4.12.0
+pycryptodome>=3.20.0
+
+# RAG 记忆系统 (可选)
+chromadb>=0.4.0
+numpy>=1.24.0
+
+# 辅助工具
+python-dotenv>=1.0.0
+rich>=13.7.0
+pyyaml>=6.0.1
+colorama>=0.4.6
+mcp>=1.0.0
+prompt_toolkit>=3.0.40
+
+# 网络和二进制分析
+beautifulsoup4>=4.12.0
+lxml>=5.0.0
+capstone>=5.0.0
+keystone-engine>=0.9.2
+
+# 其他实用工具
+tqdm>=4.66.0

