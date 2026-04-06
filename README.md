@@ -68,7 +68,7 @@ LLM_MODEL=deepseek-chat
 **交互模式**（推荐）：
 
 ```bash
-python main.py
+python main.py -i
 ```
 
 **直接指定题目**：
